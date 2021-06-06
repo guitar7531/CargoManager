@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Add a line to a map using a GeoJSON source</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.3.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.3.0/mapbox-gl.js"></script>
+<style>
+body { margin: 0; padding: 0; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+	mapboxgl.accessToken = 'pk.eyJ1IjoiZG1zaGEiLCJhIjoiY2twbDQxbHQ3MjFwcTJ3cmlpODQ4czZvdSJ9.UK9-QRmfSgBsPmASAWwK5w';
+    var map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/satellite-v9',
+        center: [30.207505, 59.883028],
+        zoom: 16
+    });
+
+    map.on('load', function () {
+        map.addSource('cargo', {'type': 'geojson',
+							    'data': %geojson });
+
+        map.addLayer({
+            "id": "cargo_storage",
+            "type": "fill",
+            "source": "cargo",
+            "filter": ["has", "name"],
+            "layout": {},
+            "paint": {
+                "fill-color": [
+                    "match",
+                    ["get", "name"],
+                    %zones,
+                    "hsl(0, 100%, 51%)",
+                    "hsl(242, 8%, 44%)"
+                ]
+            }
+        });
+        map.addLayer({
+            "id": "cargo_storage_border",
+            "type": "line",
+            "source": "cargo",
+            "filter": ["has", "name"],
+            "layout": {},
+            "paint": {"line-width": 1.3}
+        });
+		map.addLayer({
+            "id": "cargo_storage_labels",
+            "type": "symbol",
+            "source": "cargo",
+            "filter": ["has", "name"],
+            "layout": {"text-field": "{name}", "text-size": 10},
+            "paint": {
+                "text-halo-color": "hsla(225, 69%, 49%, 0)",
+                "text-halo-width": 2
+            }
+        });
+
+    });
+</script>
+
+</body>
+</html>
