@@ -300,22 +300,6 @@ class ListCargoLayout(QTableView):
         self.setModel(model)
 
 
-    # def createTable(self):
-    #     self.table = TableModel(self)
-
-    #     namesCompleter = QCompleter(cargoNames)
-    #     namesCompleter.setCaseSensitivity(False)
-    #     self.nameInput =  QLineEdit()
-    #     self.nameInput.setCompleter(namesCompleter)
-
-    #     self.findButton = QPushButton("Найти", self)
-    #     self.findButton.clicked.connect(self.findCargo)
-
-    #     self.inputForm.addRow("Груз:", self.nameInput)
-    #     self.inputForm.addRow(self.findButton)
-
-
-
 if __name__ == '__main__':
 
     import sys
