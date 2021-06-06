@@ -176,7 +176,8 @@ class UnloadCargoLayout(QDialog):
 
         mapLink = QLabel("Карта")
         mapLink.linkActivated.connect(self.link)
-        mapLink.setText('<a href="file:///Users/shakhanovich/Desktop/pyqt/map.html">Карта</a>')
+
+        mapLink.setText('<a href="file://{}">Карта</a>'.format(os.path.join(os.getcwdb().decode("utf-8") , "map.html")))
 
         self.cancleButton = QPushButton("Отмена", self)
         self.cancleButton.clicked.connect(self.closeWidget)
