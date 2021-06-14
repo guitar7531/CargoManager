@@ -6,7 +6,8 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
         QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
         QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
         QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
-        QVBoxLayout, QWidget, QFormLayout, QCompleter, QMainWindow, QTableView)
+        QVBoxLayout, QWidget, QFormLayout, QCompleter, QMainWindow, QTableView, QMessageBox)
+import webbrowser
 
 import os
 import pickle
@@ -24,17 +25,24 @@ class DateBase():
             with open(DUMP_PATH, "rb") as f:
                 self.rows = pickle.load(f)
 
-    def add(self, name, count, zone):
+    def add(self, id, name, count, zone):
+        for row in self.rows:
+            if row["name"] == name and row["zone"] == zone and row["id"] == id:
+                row["count"] += count
+                self.save()
+                return
+
         self.rows.append({
+            "id": id, 
             "name": name,
             "count": count,
             "zone": zone
         })
         self.save()
 
-    def unload(self, zone, count):
+    def unload(self, id, zone, count):
         for row in self.rows:
-            if row["zone"] == zone:
+            if row["zone"] == zone and row["id"] == id:
                 row["count"] -= count
 
         self.sanitize()
@@ -54,6 +62,7 @@ class MainLayout(QWidget):
 
         self.createMenu()
         self.setLayout(self.menu)
+        self.resize(300, 100);
 
 
     def createMenu(self):
@@ -93,8 +102,11 @@ class MainLayout(QWidget):
         self.cargoListLayout = cargoListLayout
 
     def showCargoListLayout(self):
+        self.cargoListLayout.reloadTable()
         self.cargoListLayout.show()
 
+
+ZONE_ROWS_COUNT = 3
 
 class AddCargoLayout(QWidget):
     def __init__(self, db, mainLayout):
@@ -104,35 +116,59 @@ class AddCargoLayout(QWidget):
 
         self.createInputForm()
         self.setLayout(self.inputForm)
+        self.resize(300, 100);
 
 
     def createInputForm(self):
         self.inputForm = QFormLayout()
 
+        self.idInput =  QLineEdit()
+
         namesCompleter = QCompleter(cargoNames)
         namesCompleter.setCaseSensitivity(False)
-        self.nameInput =  QLineEdit()
+        self.nameInput = QLineEdit()
         self.nameInput.setCompleter(namesCompleter)
-
-        self.zoneInput =  QLineEdit()
 
         self.addButton = QPushButton("Добавить", self)
         self.addButton.clicked.connect(self.addCargo)
 
-        self.cargoCountInput = QSpinBox()
+        self.backButton = QPushButton("Назад", self)
+        self.backButton.clicked.connect(self.goBack)
 
+        self.inputForm.addRow("Приёмный акт:", self.idInput)
         self.inputForm.addRow("Груз:", self.nameInput)
-        self.inputForm.addRow("Кол-во:", self.cargoCountInput)
-        self.inputForm.addRow("Зона:", self.zoneInput)
+
+        self.zonesInput = []
+        self.cargosCountInput = []
+
+        for i in range(ZONE_ROWS_COUNT):
+
+            self.zonesInput.append(QLineEdit())
+
+            self.cargosCountInput.append(QSpinBox())
+            self.cargosCountInput[-1].setMaximum(100000000)
+
+
+            self.inputForm.addRow(QLabel(""), QLabel(""))
+            self.inputForm.addRow("Зона {}:".format(i + 1), self.zonesInput[-1])
+            self.inputForm.addRow("Кол-во:", self.cargosCountInput[-1])
+
         self.inputForm.addRow(self.addButton)
+        self.inputForm.addRow(self.backButton)
 
 
     def addCargo(self):
-        self.db.add(
-            self.nameInput.text(),
-            int(self.cargoCountInput.text()),
-            self.zoneInput.text())
+        for i in range(ZONE_ROWS_COUNT):
+            if self.zonesInput[i].text():
+                self.db.add(
+                    self.idInput.text(),
+                    self.nameInput.text(),
+                    int(self.cargosCountInput[i].text()),
+                    self.zonesInput[i].text())
 
+        self.goBack()
+
+    def goBack(self):
         self.mainLayout.show()
         self.close()
 
@@ -150,7 +186,7 @@ class UnloadCargoLayout(QDialog):
 
 
     def link(self, linkStr):
-        QDesktopServices.openUrl(QUrl(linkStr))
+        webbrowser.open_new_tab(linkStr)
 
 
     def createMap(self):
@@ -221,7 +257,7 @@ class UnloadCargoLayout(QDialog):
             if count == 0:
                 continue
 
-            self.db.unload(entry["zone"], count)
+            self.db.unload(entry["id"], entry["zone"], count)
 
         self.closeWidget()
 
@@ -239,30 +275,49 @@ class FindCargoLayout(QWidget):
     def createInputForm(self):
         self.inputForm = QFormLayout()
 
-        namesCompleter = QCompleter(cargoNames)
-        namesCompleter.setCaseSensitivity(False)
-        self.nameInput =  QLineEdit()
-        self.nameInput.setCompleter(namesCompleter)
+        self.idInput =  QLineEdit()
 
         self.findButton = QPushButton("Найти", self)
         self.findButton.clicked.connect(self.findCargo)
 
-        self.inputForm.addRow("Груз:", self.nameInput)
+        self.backButton = QPushButton("Назад", self)
+        self.backButton.clicked.connect(self.goBack)
+
+        self.inputForm.addRow("Приёмный акт:", self.idInput)
+
         self.inputForm.addRow(self.findButton)
+        self.inputForm.addRow(self.backButton)
 
 
     def findCargo(self):
         entries = []
 
         for row in self.db.rows:
-            if row["name"] == self.nameInput.text():
+            if row["id"] == self.idInput.text():
                 entries.append({
                     "zone" : row["zone"],
-                    "count" : row["count"]
+                    "count" : row["count"],
+                    "id": row["id"]
                     })
+
+        if not entries:
+            self.notFound()
+            return
 
         unloadLayout = UnloadCargoLayout(self.db, self.mainLayout, entries)
         unloadLayout.exec()
+        self.close()
+
+    def notFound(self):
+        msgBox = QMessageBox()
+        msgBox.setIcon(QMessageBox.Information)
+        msgBox.setText("Приёмный акт не найден")
+        msgBox.setStandardButtons(QMessageBox.Ok)
+
+        msgBox.exec()
+
+    def goBack(self):
+        self.mainLayout.show()
         self.close()
 
 
@@ -270,14 +325,14 @@ class TableModel(QAbstractTableModel):
     def __init__(self, db):
         super(TableModel, self).__init__()
         self.db = db
-        self.headers = ["Груз", "Кол-во", "Зона"]
-        self.column_keys = ["name", "count", "zone"]
+        self.headers = ["Приёмный акт", "Груз", "Кол-во", "Зона"]
+        self.column_keys = ["id", "name", "count", "zone"]
 
     def rowCount(self, parent):
         return len(self.db.rows)
 
     def columnCount(self, parent):
-        return 3
+        return len(self.headers)
 
     def data(self, index, role):
         if role != Qt.DisplayRole:
@@ -296,6 +351,10 @@ class ListCargoLayout(QTableView):
         self.db = db
         self.mainLayout = mainLayout
 
+        self.resize(400, 200);
+        self.reloadTable()
+
+    def reloadTable(self):
         model = TableModel(db)
         self.setModel(model)
 
@@ -303,6 +362,10 @@ class ListCargoLayout(QTableView):
 if __name__ == '__main__':
 
     import sys
+
+    abspath = os.path.abspath(__file__)
+    dname = os.path.dirname(abspath)
+    os.chdir(dname)
 
     db = DateBase()
 
