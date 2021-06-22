@@ -62,7 +62,8 @@ class MainLayout(QWidget):
 
         self.createMenu()
         self.setLayout(self.menu)
-        self.resize(300, 100);
+        self.resize(400, 100)
+        self.setWindowTitle("Main title");
 
 
     def createMenu(self):
@@ -116,7 +117,8 @@ class AddCargoLayout(QWidget):
 
         self.createInputForm()
         self.setLayout(self.inputForm)
-        self.resize(300, 100);
+        self.resize(400, 100)
+        self.setWindowTitle("Add cargo title");
 
 
     def createInputForm(self):
@@ -180,9 +182,11 @@ class UnloadCargoLayout(QDialog):
         self.mainLayout = mainLayout
         self.entries = entries
 
+        self.resize(400, 100);
         self.createMap()
         self.createFindResult()
         self.setLayout(self.resultForm)
+        self.setWindowTitle("Upload title");
 
 
     def link(self, linkStr):
@@ -270,6 +274,8 @@ class FindCargoLayout(QWidget):
 
         self.createInputForm()
         self.setLayout(self.inputForm)
+        self.setWindowTitle("Find cargo title")
+        self.resize(400, 100);
 
 
     def createInputForm(self):
@@ -353,6 +359,7 @@ class ListCargoLayout(QTableView):
 
         self.resize(400, 200);
         self.reloadTable()
+        self.setWindowTitle("List cargo title");
 
     def reloadTable(self):
         model = TableModel(db)
